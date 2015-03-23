@@ -15,7 +15,7 @@ def extractFile(zFile, password):
 # para ver si son la adecuada.
 def main():
 	# Definimos el mensaje de ayuda.
-	parser = optparse.OptionParser("usage%prog " + "-f <zipfile> -d <dictionary>")
+	parser = optparse.OptionParser("usage %prog " + "-f <zipfile> -d <dictionary>")
 	# Definimos el parametro -f, el nombre de la variable destino, el tipo (string) y el mensaje de ayuda.
 	parser.add_option('-f', dest='zname', type='string', help='specify the zip file')
 	# Definimos el parametro -d, el nombre de la variable destino, el tipo (string) y el mensaje de ayuda.
