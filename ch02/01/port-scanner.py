@@ -1,5 +1,10 @@
 import optparse
 from socket import *
+from threading import *
+# Semaforo que usamos para garantizar que cada thread pude sacar todos los mensajes
+# por pantalla que le corresponda en cada momento. Esto evita que los mensajes de los
+# diferentes threads se mezclen entre ellos.
+screenLock = Semaphore(value=1)
 
 # Funcionq ue lleva a cabo una conexion a una ip y puerto que le pasamos como
 # parametro.
@@ -14,14 +19,21 @@ def connScan (tgtHost, tgtPort):
 		connSkt.send('ViolentPython\r\n')
 		# Recogemos la respuesta al servicio.
 		results = connSkt.recv(100)
+		# Bloqueamos la salida por pantalla para el presente thread.
+		screenLock.acquire()
 		# Mostramos el resultado de la conexion
 		print '[+] %d/tcp open'% tgtPort
-		print '[+] ' + str(results)
+		print '[+] ' + str(results)		
+	except:
+		# Bloqueamos la salida por pantalla para el presente thread.
+		screenLock.acquire()
+		# En caso de error en la conexion con el servicio.
+		print '[-] %d/tcp closed'% tgtPort
+	finally:
+		# Liberamos la salida por pantalla del presente thread.
+		screenLock.release()
 		# Cerramos el socket.
 		connSkt.close()
-	except:
-		# En caso de error en la conexion con el servicio.
-		print '[-]%d/tcp closed'% tgtPort
 
 # Funcion que se encarga del escaneado de puertos para la ip dada.
 def portScan (tgtHost, tgtPorts):
@@ -32,15 +44,15 @@ def portScan (tgtHost, tgtPorts):
 		return
 	try:
 		tgtName = gethostbyaddr(tgtIp)
-		print '\n[+] Scan Results for: ' + tgtName[0]
+		print '[+] Scan Results for: ' + tgtName[0]
 	except:
-		print '\n[+] Scan Results for: ' + tgtIp
+		print '[+] Scan Results for: ' + tgtIp
 	setdefaulttimeout(1)
 	# Para cada uno de los puertos, realizamos una conexion para verificar
 	# si existe algun servicio a la escucha o no.
 	for tgtPort in tgtPorts:
-		print '[+] Scanning port ' + tgtPort
-		connScan(tgtHost, int(tgtPort))
+		t = Thread(target = connScan, args=(tgtHost, int(tgtPort)))
+		t.start()
 
 # Funcion principal.
 def main():
