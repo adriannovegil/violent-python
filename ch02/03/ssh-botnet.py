@@ -1,28 +1,46 @@
-# Pxssh es un script especializado en ssh que esta incluido en la libreria
-# pxssh. Incorpora las capacidades de dialogo directo con el servidor de ssh
-# mediante funciones como login(), logout() o prompt()
-import pxssh
+import pexpect
 
 # Posibles PROMPTs que nos podemos encontrar.
 PROMPT = ['# ', '>>> ', '> ', '\$ ']
 
 # Funcion a traves de la cual podemos enviar un comando
-def sendCommand(s, cmd):	
-	s.sendline(cmd)
-	s.prompt()
-	print s.before
+def sendCommand(child, cmd):
+	child.sendline(cmd)
+	child.expect(PROMPT)
+	print child.before
 
 # Funcion que se encarga de la conexion. Le pasamos como parametro los datos
 # de acceso, usuario, host y password.
 def connect(user, host, password):
-	try:
-		# Usamos 
-		s = pxssh.pxssh()
-		s.login(host, user, password)
-		return s
-	except:
+	ssh_newkey = 'Are you sure you want to continue connecting'
+	# Cadena de conexion.
+	connStr = 'ssh ' + user + '@' + host
+	child = pexpect.spawn(connStr)
+	# Definimos posibles respuestas que el servidor de ssh no puede retornar.
+	# Un timeout, solicitar que confirmemos la conexion, o que introduzcamos
+	# el password.
+	ret = child.expect([pexpect.TIMEOUT, ssh_newkey, '[P|p]assword:'])
+	# Caso de timeout
+	if ret == 0:
 		print '[-] Error Connecting'
-		exit(0)
+		return
+	# Caso de que se nos pida la confirmacion para continuar.
+	if ret == 1:
+		# Confirmamos la conexion.
+		child.sendline('yes')
+		# Reintentamos la conexion. Solamente dos opciones deberian de ser
+		# viables.
+		ret = child.expect([pexpect.TIMEOUT, '[P|p]assword:'])
+		# En caso de un posible fallo despues de confirmar la conexion.
+		if ret == 0:
+			print '[-] Error Connecting'
+			return
+	# Si todo ha ido bien, le pasamos el password a la conexion.
+	child.sendline(password)
+	# Esperamos el PROMPT
+	child.expect(PROMPT)
+	# Retornamos el proceso que ha gestionado la conexion por ssh.
+	return child
 
 # Funcion principal.
 def main():
